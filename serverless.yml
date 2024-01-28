@@ -1,0 +1,66 @@
+service: go-serverless
+
+frameworkVersion: '3'
+provider:
+  name: aws
+  runtime: go1.x
+  region: us-east-1
+  stage: ${opt:stage}
+  environment:
+    DYNAMODB_TABLE: ${self:service}-${opt:stage, self:provider.stage}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: "arn:aws:dynamodb:us-east-1:237071355172:table/usersTable"
+
+
+
+
+package:
+  patterns:
+    - '!./**'
+    - ./bin/**
+
+
+functions:
+  api:
+    handler: bin/main
+    events: 
+      - http:
+          path: /users
+          method: GET
+      - http:
+          path: /health
+          method: GET
+      - http:
+          path: /users
+          method: POST
+      - http:
+          path: /users/{email}
+          method: GET
+      - http:
+          path: /users
+          method: PUT
+
+resources: # CloudFormation template syntax from here on.
+  - Resources:
+      UsersTable:
+        Type: 'AWS::DynamoDB::Table'
+        Properties:
+          TableName: usersTable
+          AttributeDefinitions:
+            - AttributeName: email
+              AttributeType: S
+          KeySchema:
+            - AttributeName: email
+              KeyType: HASH
+          ProvisionedThroughput:
+            ReadCapacityUnits: 1
+            WriteCapacityUnits: 1
+
